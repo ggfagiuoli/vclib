@@ -38,14 +38,6 @@ endif()
 
 add_subdirectory(common)
 
-add_subdirectory(00-hello-triangle)
-add_subdirectory(01-viewer)
-add_subdirectory(02-mesh-viewer)
-add_subdirectory(03-viewer-with-text)
-add_subdirectory(04-hello-triangle-imgui)
-add_subdirectory(05-two-window-viewers)
-add_subdirectory(06-viewer-imgui)
-add_subdirectory(07-mesh-viewer-imgui)
 add_subdirectory(9999-mytest)
 
 if (TARGET vclib-processing)

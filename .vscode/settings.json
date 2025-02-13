@@ -43,5 +43,8 @@
         "Unwrapper",
         "vclib"
     ],
-    "doxygen_runner.configuration_file_override": "${workspaceFolder}/docs/Doxyfile"
+    "doxygen_runner.configuration_file_override": "${workspaceFolder}/docs/Doxyfile",
+    "files.associations": {
+        "xiosbase": "cpp"
+    }
 }

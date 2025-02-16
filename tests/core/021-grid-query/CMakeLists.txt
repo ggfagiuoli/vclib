@@ -22,16 +22,18 @@
 
 cmake_minimum_required(VERSION 3.24)
 
-set(EXAMPLE_NAME 06-test-texcoords)
-project(vclib-render-example-${EXAMPLE_NAME})
+set(TEST_NAME 021-grid-query)
+project(vclib-test-${TEST_NAME})
 
-### Build settings
-set(CMAKE_CXX_STANDARD 20)
+set(HEADERS
+    common.h
+    k_nearest.h
+    nearest.h)
 
 set(SOURCES
     main.cpp)
 
-# will create a target called 'vclib-render-example-${EXAMPLE_NAME}'
-vclib_add_example(${EXAMPLE_NAME}
-    VCLIB_MODULE render
-    SOURCES ${SOURCES})
+vclib_add_test(
+    ${TEST_NAME}
+    SOURCES ${HEADERS} ${SOURCES}
+    ${HEADER_ONLY_OPTION})

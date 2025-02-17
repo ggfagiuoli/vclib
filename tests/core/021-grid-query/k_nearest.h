@@ -36,21 +36,20 @@ template<vcl::FaceMeshConcept MeshType, typename PointType>
 auto bruteForceKNearestFaces(
     const MeshType&               mesh,
     const std::vector<PointType>& points,
-    vcl::uint k)
+    vcl::uint                     k)
 {
     using ScalarType = PointType::ScalarType;
     using FaceType   = MeshType::FaceType;
 
     auto distFun = vcl::distFunction<PointType, FaceType>();
 
-    std::vector<std::vector<std::pair<uint, ScalarType>>> nearestAndDists(
+    std::vector<std::vector<std::pair<vcl::uint, ScalarType>>> nearestAndDists(
         points.size());
 
-    vcl::Timer t(
-        "Computing brute force kn faces for " + meshName<MeshType>());
+    vcl::Timer t("Computing brute force kn faces for " + meshName<MeshType>());
 
     for (vcl::uint i = 0; const auto& p : points) {
-        std::vector<std::pair<uint, ScalarType>> facesAndDists(
+        std::vector<std::pair<vcl::uint, ScalarType>> facesAndDists(
             mesh.faceNumber());
 
         vcl::uint j = 0;
@@ -60,10 +59,13 @@ auto bruteForceKNearestFaces(
         }
 
         std::sort(
-            facesAndDists.begin(), facesAndDists.end(),
-            [](const auto& a, const auto& b) { return a.second < b.second; });
+            facesAndDists.begin(),
+            facesAndDists.end(),
+            [](const auto& a, const auto& b) {
+                return a.second < b.second;
+            });
 
-        nearestAndDists[i] = std::vector<std::pair<uint, ScalarType>>(
+        nearestAndDists[i] = std::vector<std::pair<vcl::uint, ScalarType>>(
             facesAndDists.begin(), facesAndDists.begin() + k);
 
         ++i;
@@ -78,7 +80,7 @@ auto gridKNearestFaces(
     const Grid&                   grid,
     const MeshType&               mesh,
     const std::vector<PointType>& points,
-    uint                          k,
+    vcl::uint                     k,
     const std::string&            gridName)
 {
     using FaceType   = MeshType::FaceType;
@@ -89,12 +91,13 @@ auto gridKNearestFaces(
     vcl::Timer t(
         "Computing k nearests - " + meshName<MeshType>() + " - " + gridName);
     t.start();
-    std::vector<std::vector<std::pair<uint, ScalarType>>>  nearestGrid(points.size());
+    std::vector<std::vector<std::pair<vcl::uint, ScalarType>>> nearestGrid(
+        points.size());
     for (vcl::uint i = 0; i < points.size(); i++) {
-        auto vec       = grid.kClosestValues(points[i], k);
+        auto vec = grid.kClosestValues(points[i], k);
         nearestGrid[i].resize(vec.size());
         for (vcl::uint j = 0; j < vec.size(); j++) {
-            ScalarType dist = distFun(points[i], *vec[j]->second);
+            ScalarType dist   = distFun(points[i], *vec[j]->second);
             nearestGrid[i][j] = {vec[j]->second->index(), dist};
         }
     }
@@ -107,7 +110,7 @@ template<template<typename, typename> typename Grid, typename MeshType>
 void kNearestFacesTest(
     const MeshType&    mesh,
     const auto&        points,
-    const uint k,
+    const vcl::uint    k,
     const std::string& gridName)
 {
     auto nearestAndDists = bruteForceKNearestFaces(mesh, points, k);
@@ -122,9 +125,13 @@ void kNearestFacesTest(
         for (vcl::uint j = 0; j < k; j++) {
             if (nearestAndDists[i][j].second != nearestGrid[i][j].second) {
                 std::cerr << "Error point " << i << std::endl;
+                std::cerr << "Point: " << points[i] << std::endl;
                 std::cerr << j << " closest\n";
                 std::cerr << "Dist: " << nearestAndDists[i][j].second
                           << " DistGrid: " << nearestGrid[i][j].second
+                          << std::endl;
+                std::cerr << "Face: " << nearestAndDists[i][j].first
+                          << " FaceGrid: " << nearestGrid[i][j].first
                           << std::endl;
             }
             REQUIRE(nearestAndDists[i][j].second == nearestGrid[i][j].second);

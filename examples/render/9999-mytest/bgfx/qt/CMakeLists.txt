@@ -30,7 +30,9 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(HEADERS
     ../common.h
-    ../hello_triangle_drawer.h)
+    ../hello_triangle_drawer.h
+    ../basic_3d_drawer.h
+    )
 
 set(SOURCES
     main.cpp)

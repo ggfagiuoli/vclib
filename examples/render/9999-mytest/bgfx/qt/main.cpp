@@ -34,7 +34,7 @@ int main(int argc, char** argv)
     QApplication app(argc, argv);
 
     using WidgetQt = vcl::
-        RenderApp<vcl::qt::WidgetManager, vcl::Canvas, HelloTriangleDrawer>;
+        RenderApp<vcl::qt::WidgetManager, vcl::Canvas, Basic3dDrawer>;
 
     WidgetQt tw("Hello Triangle with Qt");
 

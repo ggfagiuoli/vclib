@@ -23,9 +23,10 @@
 #ifndef VCL_OPENGL2_DRAWABLE_DRAWABLE_MESH_H
 #define VCL_OPENGL2_DRAWABLE_DRAWABLE_MESH_H
 
+#include "mesh/mesh_render_vectors.h"
+
 #include <vclib/algorithms/mesh/stat/bounding_box.h>
 #include <vclib/render/drawable/abstract_drawable_mesh.h>
-#include <vclib/render/drawable/mesh/mesh_render_data.h>
 
 #include <vclib/opengl2/drawable/draw_objects3.h>
 
@@ -84,7 +85,7 @@ class DrawableMeshOpenGL2 : public AbstractDrawableMesh, public MeshType
 
     Box3d mBoundingBox;
 
-    MeshRenderData<MeshType> mMRD;
+    MeshRenderVectors<MeshType> mMRD;
 
     std::vector<uint> mTextID;
 
@@ -107,7 +108,8 @@ public:
 
     ~DrawableMeshOpenGL2() = default;
 
-    void updateBuffers() override
+    void updateBuffers(
+        MRI::BuffersBitSet buffersToUpdate = MRI::BUFFERS_ALL) override
     {
         if constexpr (HasName<MeshType>) {
             AbstractDrawableMesh::name() = MeshType::name();
@@ -129,7 +131,7 @@ public:
         }
 
         unbindTextures();
-        mMRD = MeshRenderData<MeshType>(*this);
+        mMRD.update(*this, buffersToUpdate);
         mMRS.setRenderCapabilityFrom(*this);
         bindTextures();
     }

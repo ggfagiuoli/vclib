@@ -20,8 +20,8 @@
  * (https://www.mozilla.org/en-US/MPL/2.0/) for more details.                *
  ****************************************************************************/
 
-#ifndef NEAREST_H
-#define NEAREST_H
+#ifndef SPHERE_H
+#define SPHERE_H
 
 #include "common.h"
 
@@ -32,85 +32,90 @@
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-template<vcl::FaceMeshConcept MeshType, typename PointType>
-auto bruteforceNearestFaces(
-    const MeshType&               mesh,
-    const std::vector<PointType>& points)
+template<vcl::FaceMeshConcept MeshType, typename SphereType>
+auto bruteforceFacesInSpheres(
+    const MeshType&                mesh,
+    const std::vector<SphereType>& spheres)
 {
-    using ScalarType = PointType::ScalarType;
+    using ScalarType = SphereType::ScalarType;
     using FaceType   = MeshType::FaceType;
 
-    auto distFun = vcl::distFunction<PointType, FaceType>();
+    auto intersFunction = [](const SphereType& s, const FaceType& f) {
+        return s.intersects(vcl::boundingBox(f));
+    };
 
-    std::vector<vcl::uint>  nearest(points.size());
-    std::vector<ScalarType> dists(
-        points.size(), std::numeric_limits<ScalarType>::max());
+    std::vector<std::vector<vcl::uint>> facesInSpheres(spheres.size());
 
-    vcl::Timer t("Computing brute force distances for " + meshName<MeshType>());
-    for (vcl::uint i = 0; const auto& p : points) {
+    vcl::Timer t(
+        "Computing brute force faces in sphere for " + meshName<MeshType>());
+    for (vcl::uint i = 0; const auto& s : spheres) {
         for (const auto& f : mesh.faces()) {
-            ScalarType dist = distFun(p, f);
-            if (dist < dists[i]) {
-                dists[i]   = dist;
-                nearest[i] = mesh.index(f);
+            intersFunction(s, f);
+            if (intersFunction(s, f)) {
+                facesInSpheres[i].push_back(mesh.index(f));
             }
         }
         ++i;
     }
     t.stopAndPrint();
 
-    return std::make_pair(nearest, dists);
+    return facesInSpheres;
 }
 
-template<typename Grid, typename PointType>
-auto gridNearestFaces(
-    const Grid&                   grid,
-    const std::vector<PointType>& points,
-    const std::string&            meshName,
-    const std::string&            gridName)
+template<typename Grid, typename SphereType>
+auto gridFacesInSpheres(
+    const Grid&                    grid,
+    const std::vector<SphereType>& spheres,
+    const std::string&             meshName,
+    const std::string&             gridName)
 {
-    using ScalarType = PointType::ScalarType;
+    using ScalarType = SphereType::ScalarType;
     vcl::Timer t("Computing nearests - " + meshName + " - " + gridName);
     t.start();
-    std::vector<vcl::uint>  nearestGrid(points.size());
-    std::vector<ScalarType> dists(
-        points.size(), std::numeric_limits<ScalarType>::max());
-    for (vcl::uint i = 0; i < points.size(); i++) {
-        auto it        = grid.closestValue(points[i], dists[i]);
-        nearestGrid[i] = it->second->index();
+    std::vector<std::vector<vcl::uint>> facesInSpheresGrid(spheres.size());
+    for (vcl::uint i = 0; i < spheres.size(); i++) {
+        auto vec = grid.valuesInSphere(spheres[i]);
+        facesInSpheresGrid[i].resize(vec.size());
+        for (vcl::uint j = 0; auto& it : vec) {
+            facesInSpheresGrid[i][j] = it->second->index();
+            ++j;
+        }
     }
     t.stopAndPrint();
-    return std::make_pair(nearestGrid, dists);
+    return facesInSpheresGrid;
 }
 
 template<template<typename, typename> typename Grid, typename MeshType>
-void closestFacesTest(
+void facesInSpheresTest(
     const MeshType&    mesh,
-    const auto&        points,
+    const auto&        spheres,
     const std::string& gridName)
 {
-    auto [nearest, dists] = bruteforceNearestFaces(mesh, points);
+    auto vsBF = bruteforceFacesInSpheres(mesh, spheres);
 
     vcl::Timer t(meshName<MeshType>() + ": Computing " + gridName);
     auto       grid = computeGrid<Grid>(mesh);
     t.stopAndPrint();
 
-    auto [nearestGrid, distsGrid] =
-        gridNearestFaces(grid, points, meshName<MeshType>(), gridName);
+    auto vsG =
+        gridFacesInSpheres(grid, spheres, meshName<MeshType>(), gridName);
 
-    for (vcl::uint i = 0; i < points.size(); i++) {
-        if (!vcl::epsilonEquals(dists[i], distsGrid[i])) {
-            std::cerr << "Error point " << i << std::endl;
-            std::cerr << "coord: \n" << points[i] << std::endl;
-            std::cerr << "cell: \n";
-            std::cerr << grid.cell(points[i]) << std::endl;
-            std::cerr << " dist: " << dists[i] << " distGrid: " << distsGrid[i]
-                      << std::endl;
-            std::cerr << "computed closest: " << nearest[i]
-                      << " grid closest: " << nearestGrid[i] << std::endl;
+    for (vcl::uint i = 0; i < spheres.size(); i++) {
+        if (vsBF[i].size() != vsG[i].size()) {
+            std::cerr << "Error in sphere " << i << std::endl;
+            std::cerr << "N. faces that intersects: " << vsBF[i].size() << " - "
+                      << vsG[i].size() << std::endl;
         }
-        REQUIRE(vcl::epsilonEquals(dists[i], distsGrid[i]));
+        REQUIRE(vsBF[i].size() == vsG[i].size());
+        for (vcl::uint j = 0; j < vsBF[i].size(); j++) {
+            auto it = std::find(vsBF[i].begin(), vsBF[i].end(), vsG[i][j]);
+            if (it == vsBF[i].end()) {
+                std::cerr << "Error in sphere " << i << std::endl;
+                std::cerr << "Face " << vsG[i][j] << " not found" << std::endl;
+            }
+            REQUIRE(it != vsBF[i].end());
+        }
     }
 }
 
-#endif // NEAREST_H
+#endif // SPHERE_H

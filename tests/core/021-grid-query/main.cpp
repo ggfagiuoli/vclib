@@ -22,6 +22,7 @@
 
 #include "k_nearest.h"
 #include "nearest.h"
+#include "sphere.h"
 
 using Meshes         = std::tuple<vcl::TriMesh, vcl::PolyMesh>;
 using Meshesf        = std::tuple<vcl::TriMeshf, vcl::PolyMeshf>;
@@ -30,7 +31,13 @@ using MeshesIndexedf = std::tuple<vcl::TriMeshIndexedf, vcl::PolyMeshIndexedf>;
 
 static const vcl::uint N_POINTS_TEST = 50;
 
-TEMPLATE_TEST_CASE("Closest faces to points...", "", Meshes)
+TEMPLATE_TEST_CASE(
+    "Closest faces to points...",
+    "",
+    Meshes,
+    Meshesf,
+    MeshesIndexed,
+    MeshesIndexedf)
 {
     using TriMesh  = std::tuple_element_t<0, TestType>;
     using PolyMesh = std::tuple_element_t<1, TestType>;
@@ -86,7 +93,13 @@ TEMPLATE_TEST_CASE("Closest faces to points...", "", Meshes)
     }
 }
 
-TEMPLATE_TEST_CASE("K nearest faces to points...", "", Meshes)
+TEMPLATE_TEST_CASE(
+    "K nearest faces to points...",
+    "",
+    Meshes,
+    Meshesf,
+    MeshesIndexed,
+    MeshesIndexedf)
 {
     using TriMesh  = std::tuple_element_t<0, TestType>;
     using PolyMesh = std::tuple_element_t<1, TestType>;
@@ -101,7 +114,7 @@ TEMPLATE_TEST_CASE("K nearest faces to points...", "", Meshes)
     {
         using PointType = TriMesh::VertexType::CoordType;
 
-        std::size_t        seed = std::random_device()();
+        std::size_t seed = std::random_device()();
 
         TriMesh tm = vcl::load<TriMesh>(MESH_PATH);
         vcl::updateBoundingBox(tm);
@@ -111,14 +124,13 @@ TEMPLATE_TEST_CASE("K nearest faces to points...", "", Meshes)
 
         SECTION("HashTableGrid")
         {
-            kNearestFacesTest<HSGrid3>(tm, points, K_NEAREST,
-            "HashTableGrid");
+            kNearestFacesTest<HSGrid3>(tm, points, K_NEAREST, "HashTableGrid");
         }
 
         SECTION("StaticGrid")
         {
-            kNearestFacesTest<vcl::StaticGrid3>(tm, points, K_NEAREST,
-            "StaticGrid");
+            kNearestFacesTest<vcl::StaticGrid3>(
+                tm, points, K_NEAREST, "StaticGrid");
         }
     }
 
@@ -126,7 +138,7 @@ TEMPLATE_TEST_CASE("K nearest faces to points...", "", Meshes)
     {
         using PointType = PolyMesh::VertexType::CoordType;
 
-        std::size_t        seed = std::random_device()();
+        std::size_t seed = std::random_device()();
 
         PolyMesh pm = vcl::load<PolyMesh>(MESH_PATH);
         vcl::updateBoundingBox(pm);
@@ -136,14 +148,79 @@ TEMPLATE_TEST_CASE("K nearest faces to points...", "", Meshes)
 
         SECTION("HashTableGrid")
         {
-            kNearestFacesTest<HSGrid3>(pm, points, K_NEAREST,
-            "HashTableGrid");
+            kNearestFacesTest<HSGrid3>(pm, points, K_NEAREST, "HashTableGrid");
         }
 
         SECTION("StaticGrid")
         {
-            kNearestFacesTest<vcl::StaticGrid3>(pm, points, K_NEAREST,
-            "StaticGrid");
+            kNearestFacesTest<vcl::StaticGrid3>(
+                pm, points, K_NEAREST, "StaticGrid");
+        }
+    }
+}
+
+TEMPLATE_TEST_CASE(
+    "Faces in spheres...",
+    "",
+    Meshes,
+    Meshesf,
+    MeshesIndexed,
+    MeshesIndexedf)
+{
+    using TriMesh  = std::tuple_element_t<0, TestType>;
+    using PolyMesh = std::tuple_element_t<1, TestType>;
+
+    using namespace vcl;
+
+    const std::string MESH_PATH = VCLIB_EXAMPLE_MESHES_PATH "/bunny.obj";
+
+    SECTION("TriMesh")
+    {
+        using PointType  = TriMesh::VertexType::CoordType;
+        using ScalarType = PointType::ScalarType;
+        using SphereType = Sphere<ScalarType>;
+
+        std::size_t seed = std::random_device()();
+
+        TriMesh tm = vcl::load<TriMesh>(MESH_PATH);
+        vcl::updateBoundingBox(tm);
+
+        std::vector<SphereType> spheres =
+            randomSpheres(N_POINTS_TEST, tm, seed);
+
+        SECTION("HashTableGrid")
+        {
+            facesInSpheresTest<HSGrid3>(tm, spheres, "HashTableGrid");
+        }
+
+        SECTION("StaticGrid")
+        {
+            facesInSpheresTest<vcl::StaticGrid3>(tm, spheres, "StaticGrid");
+        }
+    }
+
+    SECTION("PolyMesh")
+    {
+        using PointType  = PolyMesh::VertexType::CoordType;
+        using ScalarType = PointType::ScalarType;
+        using SphereType = Sphere<ScalarType>;
+
+        std::size_t seed = std::random_device()();
+
+        PolyMesh pm = vcl::load<PolyMesh>(MESH_PATH);
+        vcl::updateBoundingBox(pm);
+
+        std::vector<SphereType> spheres =
+            randomSpheres(N_POINTS_TEST, pm, seed);
+
+        SECTION("HashTableGrid")
+        {
+            facesInSpheresTest<HSGrid3>(pm, spheres, "HashTableGrid");
+        }
+
+        SECTION("StaticGrid")
+        {
+            facesInSpheresTest<vcl::StaticGrid3>(pm, spheres, "StaticGrid");
         }
     }
 }
